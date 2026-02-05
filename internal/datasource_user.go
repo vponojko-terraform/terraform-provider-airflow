@@ -105,7 +105,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 
 	username := d.Get("username").(string)
 
-	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", username), nil)
+	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil)
 	if err != nil {
 		if statusCode == 404 {
 			return diag.Errorf("user '%s' not found", username)

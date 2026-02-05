@@ -69,7 +69,7 @@ func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface
 
 	name := d.Get("name").(string)
 
-	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/roles/%s", name), nil)
+	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/roles/%s", URLEncode(name)), nil)
 	if err != nil {
 		if statusCode == 404 {
 			return diag.Errorf("role '%s' not found", name)

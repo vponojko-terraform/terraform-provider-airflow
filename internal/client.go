@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -41,24 +43,27 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body interf
 	var req *http.Request
 	var err error
 
-	url := fmt.Sprintf("%s%s", c.Host, path)
+	// Ensure path is properly encoded (but don't double-encode)
+	fullURL := fmt.Sprintf("%s%s", strings.TrimRight(c.Host, "/"), path)
 
 	if body != nil {
 		jsonBody, err := json.Marshal(body)
 		if err != nil {
 			return nil, 0, err
 		}
-		req, err = http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(jsonBody))
+		req, err = http.NewRequestWithContext(ctx, method, fullURL, bytes.NewBuffer(jsonBody))
 		if err != nil {
 			return nil, 0, err
 		}
 		req.Header.Set("Content-Type", "application/json")
 	} else {
-		req, err = http.NewRequestWithContext(ctx, method, url, nil)
+		req, err = http.NewRequestWithContext(ctx, method, fullURL, nil)
 		if err != nil {
 			return nil, 0, err
 		}
 	}
+
+	req.Header.Set("Accept", "application/json")
 
 	// Set authorization header
 	if c.Token != "" {
@@ -70,7 +75,7 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body interf
 
 	tflog.Debug(ctx, "Making API request", map[string]interface{}{
 		"method": method,
-		"url":    url,
+		"url":    fullURL,
 	})
 
 	resp, err := c.HTTPClient.Do(req)
@@ -89,7 +94,7 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body interf
 			"status_code": resp.StatusCode,
 			"response":    string(respBody),
 			"method":      method,
-			"url":         url,
+			"url":         fullURL,
 		})
 
 		var apiErr APIError
@@ -101,4 +106,9 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body interf
 	}
 
 	return respBody, resp.StatusCode, nil
+}
+
+// URLEncode safely encodes a path segment
+func URLEncode(s string) string {
+	return url.PathEscape(s)
 }

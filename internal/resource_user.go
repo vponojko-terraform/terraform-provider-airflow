@@ -95,7 +95,6 @@ type createUserRequest struct {
 	Email     string    `json:"email"`
 	Password  string    `json:"password"`
 	Roles     []RoleRef `json:"roles,omitempty"`
-	Active    bool      `json:"active"`
 }
 
 type updateUserRequest struct {
@@ -122,7 +121,6 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		LastName:  d.Get("last_name").(string),
 		Email:     d.Get("email").(string),
 		Password:  d.Get("password").(string),
-		Active:    d.Get("active").(bool),
 	}
 
 	if v, ok := d.GetOk("roles"); ok {
@@ -143,6 +141,17 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 
 	d.SetId(username)
 
+	// If active is explicitly set to false, we need to update after create
+	// since the API doesn't accept 'active' on POST
+	if !d.Get("active").(bool) {
+		active := false
+		updateReq := updateUserRequest{Active: &active}
+		_, _, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), updateReq)
+		if err != nil {
+			return diag.FromErr(fmt.Errorf("user created but failed to set active=false: %w", err))
+		}
+	}
+
 	return resourceUserRead(ctx, d, m)
 }
 
@@ -156,7 +165,7 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		"username": username,
 	})
 
-	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", username), nil)
+	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil)
 	if err != nil {
 		if statusCode == 404 {
 			tflog.Warn(ctx, "User not found, removing from state", map[string]interface{}{
@@ -247,7 +256,7 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	if hasChanges {
-		_, statusCode, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", username), req)
+		_, statusCode, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), req)
 		if err != nil {
 			if statusCode == 409 {
 				return diag.Errorf("email already in use by another user")
@@ -269,7 +278,7 @@ func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface
 		"username": username,
 	})
 
-	_, statusCode, err := client.DoRequest(ctx, "DELETE", fmt.Sprintf("/auth/fab/v1/users/%s", username), nil)
+	_, statusCode, err := client.DoRequest(ctx, "DELETE", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil)
 	if err != nil {
 		if statusCode == 404 {
 			// Already deleted

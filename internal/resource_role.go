@@ -119,7 +119,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		"name": name,
 	})
 
-	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/roles/%s", name), nil)
+	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/roles/%s", URLEncode(name)), nil)
 	if err != nil {
 		if statusCode == 404 {
 			tflog.Warn(ctx, "Role not found, removing from state", map[string]interface{}{
@@ -176,7 +176,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 			}
 		}
 
-		_, _, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/roles/%s", name), req)
+		_, _, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/roles/%s", URLEncode(name)), req)
 		if err != nil {
 			return diag.FromErr(err)
 		}
@@ -200,7 +200,7 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.Errorf("cannot delete built-in role '%s'", name)
 	}
 
-	_, statusCode, err := client.DoRequest(ctx, "DELETE", fmt.Sprintf("/auth/fab/v1/roles/%s", name), nil)
+	_, statusCode, err := client.DoRequest(ctx, "DELETE", fmt.Sprintf("/auth/fab/v1/roles/%s", URLEncode(name)), nil)
 	if err != nil {
 		if statusCode == 404 {
 			// Already deleted
