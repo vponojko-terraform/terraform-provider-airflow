@@ -172,7 +172,7 @@ func fetchJWTToken(ctx context.Context, httpClient *http.Client, host, username,
 		return "", fmt.Errorf("failed to read token response: %w", err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != 200 && resp.StatusCode != 201 {
 		return "", fmt.Errorf("token request returned status %d: %s", resp.StatusCode, string(respBody))
 	}
 
