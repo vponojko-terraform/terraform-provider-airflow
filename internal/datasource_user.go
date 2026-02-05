@@ -95,6 +95,12 @@ func dataSourceUser() *schema.Resource {
 				Computed:    true,
 				Description: "Timestamp when user was last modified",
 			},
+			"use_basic_auth": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Use basic auth instead of JWT for this data source (required for FAB < 3.2.0)",
+			},
 		},
 	}
 }
@@ -102,10 +108,16 @@ func dataSourceUser() *schema.Resource {
 func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 	var diags diag.Diagnostics
+	useBasicAuth := d.Get("use_basic_auth").(bool)
 
 	username := d.Get("username").(string)
 
-	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil)
+	authMethod := AuthJWT
+	if useBasicAuth {
+		authMethod = AuthBasic
+	}
+
+	resp, statusCode, err := client.DoRequestWithAuth(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil, authMethod)
 	if err != nil {
 		if statusCode == 404 {
 			return diag.Errorf("user '%s' not found", username)

@@ -84,6 +84,12 @@ func resourceUser() *schema.Resource {
 				Computed:    true,
 				Description: "Timestamp when user was last modified",
 			},
+			"use_basic_auth": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
+				Description: "Use basic auth instead of JWT for this resource (required for FAB < 3.2.0)",
+			},
 		},
 	}
 }
@@ -108,6 +114,7 @@ type updateUserRequest struct {
 
 func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
+	useBasicAuth := d.Get("use_basic_auth").(bool)
 
 	username := d.Get("username").(string)
 
@@ -131,7 +138,12 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		}
 	}
 
-	_, statusCode, err := client.DoRequest(ctx, "POST", "/auth/fab/v1/users", req)
+	authMethod := AuthJWT
+	if useBasicAuth {
+		authMethod = AuthBasic
+	}
+
+	_, statusCode, err := client.DoRequestWithAuth(ctx, "POST", "/auth/fab/v1/users", req, authMethod)
 	if err != nil {
 		if statusCode == 409 {
 			return diag.Errorf("user '%s' or email already exists", username)
@@ -146,7 +158,7 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 	if !d.Get("active").(bool) {
 		active := false
 		updateReq := updateUserRequest{Active: &active}
-		_, _, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), updateReq)
+		_, _, err := client.DoRequestWithAuth(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), updateReq, authMethod)
 		if err != nil {
 			return diag.FromErr(fmt.Errorf("user created but failed to set active=false: %w", err))
 		}
@@ -158,6 +170,7 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 	var diags diag.Diagnostics
+	useBasicAuth := d.Get("use_basic_auth").(bool)
 
 	username := d.Id()
 
@@ -165,7 +178,12 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		"username": username,
 	})
 
-	resp, statusCode, err := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil)
+	authMethod := AuthJWT
+	if useBasicAuth {
+		authMethod = AuthBasic
+	}
+
+	resp, statusCode, err := client.DoRequestWithAuth(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil, authMethod)
 	if err != nil {
 		if statusCode == 404 {
 			tflog.Warn(ctx, "User not found, removing from state", map[string]interface{}{
@@ -206,6 +224,7 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 
 func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
+	useBasicAuth := d.Get("use_basic_auth").(bool)
 
 	username := d.Id()
 
@@ -256,7 +275,12 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	if hasChanges {
-		_, statusCode, err := client.DoRequest(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), req)
+		authMethod := AuthJWT
+		if useBasicAuth {
+			authMethod = AuthBasic
+		}
+
+		_, statusCode, err := client.DoRequestWithAuth(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), req, authMethod)
 		if err != nil {
 			if statusCode == 409 {
 				return diag.Errorf("email already in use by another user")
@@ -271,6 +295,7 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	client := m.(*Client)
 	var diags diag.Diagnostics
+	useBasicAuth := d.Get("use_basic_auth").(bool)
 
 	username := d.Id()
 
@@ -278,7 +303,12 @@ func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface
 		"username": username,
 	})
 
-	_, statusCode, err := client.DoRequest(ctx, "DELETE", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil)
+	authMethod := AuthJWT
+	if useBasicAuth {
+		authMethod = AuthBasic
+	}
+
+	_, statusCode, err := client.DoRequestWithAuth(ctx, "DELETE", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil, authMethod)
 	if err != nil {
 		if statusCode == 404 {
 			// Already deleted

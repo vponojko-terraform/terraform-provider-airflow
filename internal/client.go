@@ -22,6 +22,14 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
+// AuthMethod specifies which authentication to use
+type AuthMethod int
+
+const (
+	AuthJWT AuthMethod = iota
+	AuthBasic
+)
+
 // APIError represents an error response from the Airflow API
 type APIError struct {
 	Detail string `json:"detail"`
@@ -37,8 +45,13 @@ func (e *APIError) Error() string {
 	return e.Title
 }
 
-// DoRequest executes a request with authentication
+// DoRequest executes a request with JWT authentication (default)
 func (c *Client) DoRequest(ctx context.Context, method, path string, body interface{}) ([]byte, int, error) {
+	return c.DoRequestWithAuth(ctx, method, path, body, AuthJWT)
+}
+
+// DoRequestWithAuth executes a request with specified authentication method
+func (c *Client) DoRequestWithAuth(ctx context.Context, method, path string, body interface{}, authMethod AuthMethod) ([]byte, int, error) {
 	var req *http.Request
 	var err error
 
@@ -64,17 +77,27 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body interf
 
 	req.Header.Set("Accept", "application/json")
 
-	// Set authorization header
-	if c.Token != "" {
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
-	} else if c.Username != "" && c.Password != "" {
-		// Use SetBasicAuth which properly handles special characters
-		req.SetBasicAuth(c.Username, c.Password)
+	// Set authorization based on method
+	switch authMethod {
+	case AuthBasic:
+		if c.Username != "" && c.Password != "" {
+			req.SetBasicAuth(c.Username, c.Password)
+		}
+	case AuthJWT:
+		fallthrough
+	default:
+		if c.Token != "" {
+			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
+		} else if c.Username != "" && c.Password != "" {
+			// Fallback to basic auth if no token
+			req.SetBasicAuth(c.Username, c.Password)
+		}
 	}
 
 	tflog.Debug(ctx, "Making API request", map[string]interface{}{
-		"method": method,
-		"url":    fullURL,
+		"method":      method,
+		"url":         fullURL,
+		"auth_method": authMethod,
 	})
 
 	resp, err := c.HTTPClient.Do(req)
