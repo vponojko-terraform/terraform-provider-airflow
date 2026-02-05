@@ -3,7 +3,6 @@ package internal
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -69,8 +68,8 @@ func (c *Client) DoRequest(ctx context.Context, method, path string, body interf
 	if c.Token != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.Token))
 	} else if c.Username != "" && c.Password != "" {
-		auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", c.Username, c.Password)))
-		req.Header.Set("Authorization", fmt.Sprintf("Basic %s", auth))
+		// Use SetBasicAuth which properly handles special characters
+		req.SetBasicAuth(c.Username, c.Password)
 	}
 
 	tflog.Debug(ctx, "Making API request", map[string]interface{}{
