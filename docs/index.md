@@ -25,6 +25,25 @@ resource "airflow_user" "example" {
 
 The provider supports two authentication methods:
 
+### Airflow Configuration Required
+
+Before using this provider, you must enable basic authentication for the FAB Auth Manager API in your Airflow configuration:
+
+```ini
+[fab]
+auth_backends = airflow.providers.fab.auth_manager.api.auth.backend.basic_auth
+```
+
+For Helm chart deployments, add this to your values file:
+
+```yaml
+config:
+  fab:
+    auth_backends: 'airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
+```
+
+Without this setting, the FAB API endpoints (`/auth/fab/v1/*`) will return 401 Unauthorized.
+
 ### Basic Authentication
 ```hcl
 provider "airflow" {

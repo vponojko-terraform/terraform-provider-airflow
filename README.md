@@ -8,6 +8,25 @@ Terraform provider for managing Apache Airflow FAB Auth Manager resources.
 - Go >= 1.21
 - Apache Airflow 3.1.6+ with FAB Provider 3.0.2+
 
+## Airflow Configuration
+
+To use basic authentication with the FAB Auth Manager API, you must configure the `auth_backends` setting in your Airflow configuration:
+
+```ini
+[fab]
+auth_backends = airflow.providers.fab.auth_manager.api.auth.backend.basic_auth
+```
+
+For Helm chart deployments, add this to your values file under `config`:
+
+```yaml
+config:
+  fab:
+    auth_backends: 'airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
+```
+
+Without this configuration, the FAB API endpoints (`/auth/fab/v1/*`) will return 401 Unauthorized even with valid credentials.
+
 ## Setup
 
 ```bash
