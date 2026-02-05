@@ -141,7 +141,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 
 // fetchJWTToken obtains a JWT token from the Airflow FAB auth manager
 func fetchJWTToken(ctx context.Context, httpClient *http.Client, host, username, password string) (string, error) {
-	tokenURL := fmt.Sprintf("%s/auth/fab/v1/token", strings.TrimRight(host, "/"))
+	tokenURL := fmt.Sprintf("%s/auth/token", strings.TrimRight(host, "/"))
 
 	reqBody := tokenRequest{
 		Username: username,
