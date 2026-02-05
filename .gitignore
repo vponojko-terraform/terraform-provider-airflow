@@ -1,0 +1,43 @@
+# IDE
+.idea/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraformrc
+*.tfvars
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Provider binary
+terraform-provider-airflow
+
+# Local development & testing
+examples/local_dev/
+test/
+**/test_*.tf
+
+# Personal/sensitive files
+PERSONAL.md
+PUBLISH_PROVIDER.md
+*.env
+.env.*
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+/.kiro/
