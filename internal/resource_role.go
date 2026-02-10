@@ -210,6 +210,21 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 		if statusCode == 403 {
 			return diag.Errorf("cannot delete built-in role '%s'", name)
 		}
+		// FAB 3.2.0 has a bug where delete_role passes Role object instead of name string
+		// causing a SQLAlchemy error. Check if role was actually deleted despite the 500.
+		if statusCode == 500 {
+			tflog.Warn(ctx, "Received 500 error on role delete, checking if role was actually deleted", map[string]interface{}{
+				"name": name,
+			})
+			_, readStatus, _ := client.DoRequest(ctx, "GET", fmt.Sprintf("/auth/fab/v1/roles/%s", URLEncode(name)), nil)
+			if readStatus == 404 {
+				tflog.Info(ctx, "Role was deleted successfully despite 500 response (FAB delete_role bug)", map[string]interface{}{
+					"name": name,
+				})
+				d.SetId("")
+				return diags
+			}
+		}
 		return diag.FromErr(err)
 	}
 

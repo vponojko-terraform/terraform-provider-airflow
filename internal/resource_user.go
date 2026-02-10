@@ -148,10 +148,27 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		if statusCode == 409 {
 			return diag.Errorf("user '%s' or email already exists", username)
 		}
+		// FAB 3.2.0 has a bug where user creation succeeds but response serialization fails
+		// with a 500 error due to timezone-naive datetime fields. Verify if user was created.
+		if statusCode == 500 {
+			tflog.Warn(ctx, "Received 500 error on user create, checking if user was actually created", map[string]interface{}{
+				"username": username,
+			})
+			// Try to read the user to see if it was created despite the error
+			_, readStatus, readErr := client.DoRequestWithAuth(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil, authMethod)
+			if readErr == nil && readStatus == 200 {
+				tflog.Info(ctx, "User was created successfully despite 500 response (FAB datetime serialization bug)", map[string]interface{}{
+					"username": username,
+				})
+				d.SetId(username)
+				goto continueAfterCreate
+			}
+		}
 		return diag.FromErr(err)
 	}
 
 	d.SetId(username)
+continueAfterCreate:
 
 	// If active is explicitly set to false, we need to update after create
 	// since the API doesn't accept 'active' on POST
