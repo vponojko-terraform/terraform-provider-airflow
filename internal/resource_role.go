@@ -142,6 +142,13 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 			d.SetId("")
 			return diags
 		}
+		// FAB 3.2.0 may have serialization bugs - role exists but can't be read
+		if statusCode == 500 {
+			tflog.Warn(ctx, "Received 500 on role read (FAB bug), preserving current state", map[string]interface{}{
+				"name": name,
+			})
+			return diags
+		}
 		return diag.FromErr(err)
 	}
 

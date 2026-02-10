@@ -209,6 +209,14 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 			d.SetId("")
 			return diags
 		}
+		// FAB 3.2.0 has datetime serialization bug - user exists but can't be read
+		// Keep current state rather than failing
+		if statusCode == 500 {
+			tflog.Warn(ctx, "Received 500 on user read (FAB datetime bug), preserving current state", map[string]interface{}{
+				"username": username,
+			})
+			return diags
+		}
 		return diag.FromErr(err)
 	}
 
