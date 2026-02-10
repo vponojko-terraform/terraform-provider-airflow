@@ -101,6 +101,20 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		if statusCode == 409 {
 			return diag.Errorf("role '%s' already exists", name)
 		}
+		// FAB 3.2.0 may have serialization bugs. Retry create to verify.
+		if statusCode == 500 {
+			tflog.Warn(ctx, "Received 500 error on role create, retrying to check if role was created", map[string]interface{}{
+				"name": name,
+			})
+			_, retryStatus, _ := client.DoRequest(ctx, "POST", "/auth/fab/v1/roles", req)
+			if retryStatus == 409 {
+				tflog.Info(ctx, "Role was created successfully despite 500 response", map[string]interface{}{
+					"name": name,
+				})
+				d.SetId(name)
+				return resourceRoleRead(ctx, d, m)
+			}
+		}
 		return diag.FromErr(err)
 	}
 
