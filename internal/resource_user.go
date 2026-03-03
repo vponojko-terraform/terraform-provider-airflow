@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -17,7 +18,7 @@ func resourceUser() *schema.Resource {
 		UpdateContext: resourceUserUpdate,
 		DeleteContext: resourceUserDelete,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: resourceUserImport,
 		},
 		Schema: map[string]*schema.Schema{
 			"username": {
@@ -92,6 +93,32 @@ func resourceUser() *schema.Resource {
 			},
 		},
 	}
+}
+
+// resourceUserImport supports importing users with optional auth method specification.
+// Import ID format: "username" or "username:basic"
+// Using "username:basic" sets use_basic_auth=true in state so the subsequent read uses basic auth.
+func resourceUserImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+	importID := d.Id()
+
+	// Check if import ID contains auth method hint (e.g., "myuser:basic")
+	parts := strings.SplitN(importID, ":", 2)
+	username := parts[0]
+
+	if len(parts) == 2 {
+		switch strings.ToLower(parts[1]) {
+		case "basic":
+			d.Set("use_basic_auth", true)
+			tflog.Info(ctx, "Importing user with basic auth", map[string]interface{}{
+				"username": username,
+			})
+		default:
+			return nil, fmt.Errorf("unsupported import auth hint '%s', use 'basic' or omit (e.g., 'username' or 'username:basic')", parts[1])
+		}
+	}
+
+	d.SetId(username)
+	return []*schema.ResourceData{d}, nil
 }
 
 type createUserRequest struct {
@@ -201,6 +228,17 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	}
 
 	resp, statusCode, err := client.DoRequestWithAuth(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil, authMethod)
+
+	// If JWT auth fails with 401, automatically retry with basic auth.
+	// This handles the transition from use_basic_auth=false to use_basic_auth=true
+	// where the state still has the old value but the config has changed.
+	if err != nil && statusCode == 401 && authMethod == AuthJWT && client.Username != "" && client.Password != "" {
+		tflog.Warn(ctx, "JWT auth returned 401, retrying with basic auth", map[string]interface{}{
+			"username": username,
+		})
+		resp, statusCode, err = client.DoRequestWithAuth(ctx, "GET", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), nil, AuthBasic)
+	}
+
 	if err != nil {
 		if statusCode == 404 {
 			tflog.Warn(ctx, "User not found, removing from state", map[string]interface{}{
