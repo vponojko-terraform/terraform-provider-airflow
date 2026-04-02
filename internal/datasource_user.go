@@ -11,18 +11,17 @@ import (
 
 // UserResponse represents a user from the Airflow API
 type UserResponse struct {
-	ID             int       `json:"id"`
 	Username       string    `json:"username"`
 	FirstName      string    `json:"first_name"`
 	LastName       string    `json:"last_name"`
 	Email          string    `json:"email"`
-	Active         bool      `json:"active"`
+	Active         *bool     `json:"active"`
 	LastLogin      *string   `json:"last_login"`
-	LoginCount     int       `json:"login_count"`
-	FailLoginCount int       `json:"fail_login_count"`
+	LoginCount     *int      `json:"login_count"`
+	FailLoginCount *int      `json:"fail_login_count"`
 	Roles          []RoleRef `json:"roles"`
-	CreatedOn      string    `json:"created_on"`
-	ChangedOn      string    `json:"changed_on"`
+	CreatedOn      *string   `json:"created_on"`
+	ChangedOn      *string   `json:"changed_on"`
 }
 
 // RoleRef represents a role reference in user responses
@@ -38,11 +37,6 @@ func dataSourceUser() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The username to look up",
-			},
-			"id": {
-				Type:        schema.TypeInt,
-				Computed:    true,
-				Description: "The user's internal ID",
 			},
 			"first_name": {
 				Type:        schema.TypeString,
@@ -131,18 +125,27 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	d.SetId(username)
-	d.Set("id", user.ID)
 	d.Set("first_name", user.FirstName)
 	d.Set("last_name", user.LastName)
 	d.Set("email", user.Email)
-	d.Set("active", user.Active)
+	if user.Active != nil {
+		d.Set("active", *user.Active)
+	}
 	if user.LastLogin != nil {
 		d.Set("last_login", *user.LastLogin)
 	}
-	d.Set("login_count", user.LoginCount)
-	d.Set("fail_login_count", user.FailLoginCount)
-	d.Set("created_on", user.CreatedOn)
-	d.Set("changed_on", user.ChangedOn)
+	if user.LoginCount != nil {
+		d.Set("login_count", *user.LoginCount)
+	}
+	if user.FailLoginCount != nil {
+		d.Set("fail_login_count", *user.FailLoginCount)
+	}
+	if user.CreatedOn != nil {
+		d.Set("created_on", *user.CreatedOn)
+	}
+	if user.ChangedOn != nil {
+		d.Set("changed_on", *user.ChangedOn)
+	}
 
 	roles := make([]string, len(user.Roles))
 	for i, r := range user.Roles {

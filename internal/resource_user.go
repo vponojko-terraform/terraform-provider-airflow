@@ -188,14 +188,15 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 					"username": username,
 				})
 				d.SetId(username)
-				goto continueAfterCreate
+			} else {
+				return diag.FromErr(err)
 			}
+		} else {
+			return diag.FromErr(err)
 		}
-		return diag.FromErr(err)
+	} else {
+		d.SetId(username)
 	}
-
-	d.SetId(username)
-continueAfterCreate:
 
 	// If active is explicitly set to false, we need to update after create
 	// since the API doesn't accept 'active' on POST
@@ -267,14 +268,24 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 	d.Set("first_name", user.FirstName)
 	d.Set("last_name", user.LastName)
 	d.Set("email", user.Email)
-	d.Set("active", user.Active)
+	if user.Active != nil {
+		d.Set("active", *user.Active)
+	}
 	if user.LastLogin != nil {
 		d.Set("last_login", *user.LastLogin)
 	}
-	d.Set("login_count", user.LoginCount)
-	d.Set("fail_login_count", user.FailLoginCount)
-	d.Set("created_on", user.CreatedOn)
-	d.Set("changed_on", user.ChangedOn)
+	if user.LoginCount != nil {
+		d.Set("login_count", *user.LoginCount)
+	}
+	if user.FailLoginCount != nil {
+		d.Set("fail_login_count", *user.FailLoginCount)
+	}
+	if user.CreatedOn != nil {
+		d.Set("created_on", *user.CreatedOn)
+	}
+	if user.ChangedOn != nil {
+		d.Set("changed_on", *user.ChangedOn)
+	}
 
 	roles := make([]string, len(user.Roles))
 	for i, r := range user.Roles {

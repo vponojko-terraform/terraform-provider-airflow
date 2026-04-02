@@ -11,7 +11,7 @@ import (
 
 // PermissionsResponse represents the permissions list response
 type PermissionsResponse struct {
-	Permissions  []ActionPerm `json:"permissions"`
+	Actions      []ActionPerm `json:"actions"`
 	TotalEntries int          `json:"total_entries"`
 }
 
@@ -70,42 +70,10 @@ func dataSourcePermissionsRead(ctx context.Context, d *schema.ResourceData, m in
 	client := m.(*Client)
 	var diags diag.Diagnostics
 
-	// Fetch actions
-	actionsResp, _, err := client.DoRequest(ctx, "GET", "/auth/fab/v1/actions", nil)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	var actionsRes ActionsResponse
-	if err := json.Unmarshal(actionsResp, &actionsRes); err != nil {
-		return diag.FromErr(err)
-	}
-
-	actions := make([]string, len(actionsRes.Actions))
-	for i, a := range actionsRes.Actions {
-		actions[i] = a.Name
-	}
-	d.Set("actions", actions)
-
-	// Fetch resources
-	resourcesResp, _, err := client.DoRequest(ctx, "GET", "/auth/fab/v1/resources", nil)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-
-	var resourcesRes ResourcesResponse
-	if err := json.Unmarshal(resourcesResp, &resourcesRes); err != nil {
-		return diag.FromErr(err)
-	}
-
-	resources := make([]string, len(resourcesRes.Resources))
-	for i, r := range resourcesRes.Resources {
-		resources[i] = r.Name
-	}
-	d.Set("resources", resources)
-
-	// Fetch all permissions (paginated)
+	// Fetch all permissions (paginated) — FAB 3.6.0+ returns action-resource pairs
 	var allPermissions []map[string]interface{}
+	actionsSet := make(map[string]bool)
+	resourcesSet := make(map[string]bool)
 	offset := 0
 	limit := 100
 
@@ -120,18 +88,33 @@ func dataSourcePermissionsRead(ctx context.Context, d *schema.ResourceData, m in
 			return diag.FromErr(err)
 		}
 
-		for _, p := range permRes.Permissions {
+		for _, p := range permRes.Actions {
 			allPermissions = append(allPermissions, map[string]interface{}{
 				"action":   p.Action.Name,
 				"resource": p.Resource.Name,
 			})
+			actionsSet[p.Action.Name] = true
+			resourcesSet[p.Resource.Name] = true
 		}
 
-		if len(permRes.Permissions) < limit {
+		if len(permRes.Actions) < limit {
 			break
 		}
 		offset += limit
 	}
+
+	// Derive unique actions and resources from permissions
+	actions := make([]string, 0, len(actionsSet))
+	for a := range actionsSet {
+		actions = append(actions, a)
+	}
+	d.Set("actions", actions)
+
+	resources := make([]string, 0, len(resourcesSet))
+	for r := range resourcesSet {
+		resources = append(resources, r)
+	}
+	d.Set("resources", resources)
 
 	d.Set("permissions", allPermissions)
 	d.SetId("permissions")

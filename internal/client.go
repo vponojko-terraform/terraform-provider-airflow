@@ -15,11 +15,12 @@ import (
 
 // Client holds the authenticated client information
 type Client struct {
-	Host       string
-	Username   string
-	Password   string
-	Token      string
-	HTTPClient *http.Client
+	Host         string
+	Username     string
+	Password     string
+	Token        string
+	UseBasicAuth bool
+	HTTPClient   *http.Client
 }
 
 // AuthMethod specifies which authentication to use
@@ -45,8 +46,11 @@ func (e *APIError) Error() string {
 	return e.Title
 }
 
-// DoRequest executes a request with JWT authentication (default)
+// DoRequest executes a request with the default authentication method
 func (c *Client) DoRequest(ctx context.Context, method, path string, body interface{}) ([]byte, int, error) {
+	if c.UseBasicAuth {
+		return c.DoRequestWithAuth(ctx, method, path, body, AuthBasic)
+	}
 	return c.DoRequestWithAuth(ctx, method, path, body, AuthJWT)
 }
 

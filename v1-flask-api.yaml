@@ -1,709 +1,1115 @@
-# Licensed to the Apache Software Foundation (ASF) under one
-# or more contributor license agreements.  See the NOTICE file
-# distributed with this work for additional information
-# regarding copyright ownership.  The ASF licenses this file
-# to you under the Apache License, Version 2.0 (the
-# "License"); you may not use this file except in compliance
-# with the License.  You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing,
-# software distributed under the License is distributed on an
-# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-# KIND, either express or implied.  See the License for the
-# specific language governing permissions and limitations
-# under the License.
----
-openapi: 3.0.3
-
+openapi: 3.1.0
 info:
-  title: "Flask App Builder User & Role API"
-
-  version: '1.0.0'
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
-  contact:
-    name: Apache Software Foundation
-    url: https://airflow.apache.org
-    email: dev@airflow.apache.org
-
+  title: FAB auth manager API
+  description: This is FAB auth manager API. This API is only available if the auth
+    manager used in the Airflow environment is FAB auth manager. This API provides
+    endpoints to manage users and permissions managed by the FAB auth manager.
+  version: 0.1.0
 paths:
-  /roles:
-    get:
-      summary: List roles
-      description: |
-        Get a list of roles.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.role_and_permission_endpoint
-      operationId: get_roles
-      tags: [Role]
-      parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageOffset'
-        - $ref: '#/components/parameters/OrderBy'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RoleCollection'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-
+  /auth/token:
     post:
-      summary: Create a role
-      description: |
-        Create a new role.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.role_and_permission_endpoint
-      operationId: post_role
-      tags: [Role]
+      tags:
+      - FabAuthManager
+      summary: Create Token
+      description: Generate a new API token.
+      operationId: create_token
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Role'
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Role'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-
-  /roles/{role_name}:
-    parameters:
-      - $ref: '#/components/parameters/RoleName'
-
-    get:
-      summary: Get a role
-      description: |
-        Get a role.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.role_and_permission_endpoint
-      operationId: get_role
-      tags: [Role]
-      responses:
-        '200':
-          description: Success.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Role'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      summary: Update a role
-      description: |
-        Update a role.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.role_and_permission_endpoint
-      operationId: patch_role
-      tags: [Role]
-      parameters:
-        - $ref: '#/components/parameters/UpdateMask'
-      requestBody:
+              additionalProperties: true
+              type: object
+              title: Body
         required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Role'
-
       responses:
-        '200':
-          description: Success.
+        '201':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Role'
+                $ref: '#/components/schemas/LoginResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    delete:
-      summary: Delete a role
-      description: |
-        Delete a role.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.role_and_permission_endpoint
-      operationId: delete_role
-      tags: [Role]
-      responses:
-        '204':
-          description: Success.
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /permissions:
-    get:
-      summary: List permissions
-      description: |
-        Get a list of permissions.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.role_and_permission_endpoint
-      operationId: get_permissions
-      tags: [Permission]
-      parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageOffset'
-      responses:
-        '200':
-          description: Success.
+          description: Bad Request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ActionCollection'
+                $ref: '#/components/schemas/HTTPExceptionResponse'
         '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-
-  /users:
-    get:
-      summary: List users
-      description: |
-        Get a list of users.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.user_endpoint
-      operationId: get_users
-      tags: [User]
-      parameters:
-        - $ref: '#/components/parameters/PageLimit'
-        - $ref: '#/components/parameters/PageOffset'
-        - $ref: '#/components/parameters/OrderBy'
-      responses:
-        '200':
-          description: Success.
+          description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserCollection'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/token/cli:
     post:
-      summary: Create a user
-      description: |
-        Create a new user with unique username and email.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.user_endpoint
-      operationId: post_user
-      tags: [User]
+      tags:
+      - FabAuthManager
+      summary: Create Token Cli
+      description: Generate a new CLI API token.
+      operationId: create_token_cli
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+              title: Body
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/logout:
+    get:
+      tags:
+      - FabAuthManager
+      summary: Logout
+      description: Generate a new API token.
+      operationId: logout
+      responses:
+        '307':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /auth/fab/v1/roles:
+    post:
+      tags:
+      - FabAuthManager
+      summary: Create Role
+      description: Create a new role (actions can be empty).
+      operationId: create_role
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/RoleBody'
       responses:
         '200':
-          description: Success.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/RoleResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
         '401':
-          $ref: '#/components/responses/Unauthenticated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
         '403':
-          $ref: '#/components/responses/PermissionDenied'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
         '409':
-          $ref: '#/components/responses/AlreadyExists'
-
-  /users/{username}:
-    parameters:
-      - $ref: '#/components/parameters/Username'
-    get:
-      summary: Get a user
-      description: |
-        Get a user with a specific username.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.user_endpoint
-      operationId: get_user
-      tags: [User]
-      responses:
-        '200':
-          description: Success.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserCollectionItem'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-    patch:
-      summary: Update a user
-      description: |
-        Update fields for a user.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.user_endpoint
-      operationId: patch_user
-      tags: [User]
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Conflict
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - FabAuthManager
+      summary: Get Roles
+      description: List roles with pagination and ordering.
+      operationId: get_roles
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
       parameters:
-        - $ref: '#/components/parameters/UpdateMask'
+      - name: order_by
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Field to order by. Prefix with '-' for descending.
+          default: name
+          title: Order By
+        description: Field to order by. Prefix with '-' for descending.
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of items to skip before starting to collect results.
+          default: 0
+          title: Offset
+        description: Number of items to skip before starting to collect results.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleCollectionResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/fab/v1/roles/{name}:
+    delete:
+      tags:
+      - FabAuthManager
+      summary: Delete Role
+      description: Delete an existing role.
+      operationId: delete_role
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - FabAuthManager
+      summary: Get Role
+      description: Get an existing role.
+      operationId: get_role
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Name
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleResponse'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    patch:
+      tags:
+      - FabAuthManager
+      summary: Patch Role
+      description: Update an existing role.
+      operationId: patch_role
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: name
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Name
+      - name: update_mask
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Comma-separated list of fields to update
+          title: Update Mask
+        description: Comma-separated list of fields to update
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: '#/components/schemas/RoleBody'
       responses:
         '200':
-          description: Success.
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserCollectionItem'
+                $ref: '#/components/schemas/RoleResponse'
         '400':
-          $ref: '#/components/responses/BadRequest'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
         '401':
-          $ref: '#/components/responses/Unauthenticated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
         '403':
-          $ref: '#/components/responses/PermissionDenied'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
         '404':
-          $ref: '#/components/responses/NotFound'
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/fab/v1/permissions:
+    get:
+      tags:
+      - FabAuthManager
+      summary: Get Permissions
+      description: List all action-resource (permission) pairs.
+      operationId: get_permissions
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: order_by
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Field to order by. Prefix with '-' for descending.
+          default: id
+          title: Order By
+        description: Field to order by. Prefix with '-' for descending.
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of items to skip before starting to collect results.
+          default: 0
+          title: Offset
+        description: Number of items to skip before starting to collect results.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionCollectionResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/fab/v1/users:
+    post:
+      tags:
+      - FabAuthManager
+      summary: Create User
+      operationId: create_user
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBody'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Conflict
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Internal Server Error
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - FabAuthManager
+      summary: Get Users
+      description: List users with pagination and ordering.
+      operationId: get_users
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: order_by
+        in: query
+        required: false
+        schema:
+          type: string
+          description: Field to order by. Prefix with '-' for descending.
+          default: id
+          title: Order By
+        description: Field to order by. Prefix with '-' for descending.
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          description: Number of items to skip before starting to collect results.
+          default: 0
+          title: Offset
+        description: Number of items to skip before starting to collect results.
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCollectionResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /auth/fab/v1/users/{username}:
+    get:
+      tags:
+      - FabAuthManager
+      summary: Get User
+      description: Get a user by username.
+      operationId: get_user
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Username
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    patch:
+      tags:
+      - FabAuthManager
+      summary: Update User
+      description: Update an existing user.
+      operationId: update_user
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Username
+      - name: update_mask
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Comma-separated list of fields to update
+          title: Update Mask
+        description: Comma-separated list of fields to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatchBody'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Bad Request
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Not Found
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Conflict
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
     delete:
-      summary: Delete a user
-      description: |
-        Delete a user with a specific username.
-
-        *New in version 2.8.0*
-      x-openapi-router-controller: airflow.providers.fab.auth_manager.api_endpoints.user_endpoint
+      tags:
+      - FabAuthManager
+      summary: Delete User
+      description: Delete a user by username.
       operationId: delete_user
-      tags: [User]
+      security:
+      - OAuth2PasswordBearer: []
+      - HTTPBearer: []
+      parameters:
+      - name: username
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          title: Username
       responses:
         '204':
-          description: Success.
-        '400':
-          $ref: '#/components/responses/BadRequest'
+          description: Successful Response
         '401':
-          $ref: '#/components/responses/Unauthenticated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Unauthorized
         '403':
-          $ref: '#/components/responses/PermissionDenied'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Forbidden
         '404':
-          $ref: '#/components/responses/NotFound'
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPExceptionResponse'
+          description: Not Found
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
-  # Reusable schemas (data models)
   schemas:
-    # Database entities
-    UserCollectionItem:
-      description: |
-        A user object.
-
-        *New in version 2.8.0*
-      type: object
-      properties:
-        first_name:
-          type: string
-          description: |
-            The user's first name.
-        last_name:
-          type: string
-          description: |
-            The user's last name.
-        username:
-          type: string
-          description: |
-            The username.
-          minLength: 1
-        email:
-          type: string
-          description: |
-            The user's email.
-          minLength: 1
-        active:
-          type: boolean
-          description: Whether the user is active
-          readOnly: true
-          nullable: true
-        last_login:
-          type: string
-          format: datetime
-          description: The last user login
-          readOnly: true
-          nullable: true
-        login_count:
-          type: integer
-          description: The login count
-          readOnly: true
-          nullable: true
-        failed_login_count:
-          type: integer
-          description: The number of times the login failed
-          readOnly: true
-          nullable: true
-        roles:
-          type: array
-          description: |
-            User roles.
-          items:
-            type: object
-            properties:
-              name:
-                type: string
-            nullable: true
-        created_on:
-          type: string
-          format: datetime
-          description: The date user was created
-          readOnly: true
-          nullable: true
-        changed_on:
-          type: string
-          format: datetime
-          description: The date user was changed
-          readOnly: true
-          nullable: true
-    User:
-      type: object
-      description: |
-        A user object with sensitive data.
-
-        *New in version 2.8.0*
-      allOf:
-        - $ref: '#/components/schemas/UserCollectionItem'
-        - type: object
-          properties:
-            password:
-              type: string
-              writeOnly: true
-
-    UserCollection:
-      type: object
-      description: |
-        Collection of users.
-
-        *New in version 2.8.0*
-      allOf:
-        - type: object
-          properties:
-            users:
-              type: array
-              items:
-                $ref: '#/components/schemas/UserCollectionItem'
-        - $ref: '#/components/schemas/CollectionInfo'
-
-    Role:
-      description: |
-        a role item.
-
-        *New in version 2.8.0*
-      type: object
-      properties:
-        name:
-          type: string
-          description: |
-            The name of the role
-          minLength: 1
-        actions:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActionResource'
-
-    RoleCollection:
-      description: |
-        A collection of roles.
-
-        *New in version 2.8.0*
-      type: object
-      allOf:
-        - type: object
-          properties:
-            roles:
-              type: array
-              items:
-                $ref: '#/components/schemas/Role'
-        - $ref: '#/components/schemas/CollectionInfo'
-
     Action:
-      description: |
-        An action Item.
-
-        *New in version 2.8.0*
-      type: object
       properties:
         name:
           type: string
-          description: The name of the permission "action"
-          nullable: false
-
-    ActionCollection:
-      description: |
-        A collection of actions.
-
-        *New in version 2.8.0*
+          title: Name
       type: object
-      allOf:
-        - type: object
-          properties:
-            actions:
-              type: array
-              items:
-                $ref: '#/components/schemas/Action'
-        - $ref: '#/components/schemas/CollectionInfo'
-
-    Resource:
-      description: |
-        A resource on which permissions are granted.
-
-        *New in version 2.8.0*
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name of the resource
-          nullable: false
-
+      required:
+      - name
+      title: Action
+      description: Outgoing representation of an action (permission name).
     ActionResource:
-      description: |
-        The Action-Resource item.
-
-        *New in version 2.8.0*
-      type: object
       properties:
         action:
-          type: object
           $ref: '#/components/schemas/Action'
-          description: The permission action
         resource:
-          type: object
           $ref: '#/components/schemas/Resource'
-          description: The permission resource
-
-    # Generic
-    Error:
-      description: |
-        [RFC7807](https://tools.ietf.org/html/rfc7807) compliant response.
       type: object
-      properties:
-        type:
-          type: string
-          description: |
-            A URI reference [RFC3986] that identifies the problem type. This specification
-            encourages that, when dereferenced, it provide human-readable documentation for
-            the problem type.
-        title:
-          type: string
-          description: A short, human-readable summary of the problem type.
-        status:
-          type: number
-          description: The HTTP status code generated by the API server for this occurrence of the problem.
-        detail:
-          type: string
-          description: A human-readable explanation specific to this occurrence of the problem.
-        instance:
-          type: string
-          description: |
-            A URI reference that identifies the specific occurrence of the problem. It may or may
-            not yield further information if dereferenced.
       required:
-        - type
-        - title
-        - status
-
-    CollectionInfo:
-      description: Metadata about collection.
-      type: object
+      - action
+      - resource
+      title: ActionResource
+      description: Pairing of an action with a resource.
+    HTTPExceptionResponse:
       properties:
+        detail:
+          anyOf:
+          - type: string
+          - additionalProperties: true
+            type: object
+          title: Detail
+      type: object
+      required:
+      - detail
+      title: HTTPExceptionResponse
+      description: HTTPException Model used for error response.
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    LoginResponse:
+      properties:
+        access_token:
+          type: string
+          title: Access Token
+      type: object
+      required:
+      - access_token
+      title: LoginResponse
+      description: API Token serializer for responses.
+    PermissionCollectionResponse:
+      properties:
+        actions:
+          items:
+            $ref: '#/components/schemas/ActionResource'
+          type: array
+          title: Actions
         total_entries:
           type: integer
-          description: |
-            Count of total objects in the current result set before pagination parameters
-            (limit, offset) are applied.
-
-
-  # Reusable path, query, header and cookie parameters
-  parameters:
-    # Pagination parameters
-    PageOffset:
-      in: query
-      name: offset
-      required: false
-      schema:
-        type: integer
-        minimum: 0
-      description: The number of items to skip before starting to collect the result set.
-
-    PageLimit:
-      in: query
-      name: limit
-      required: false
-      schema:
-        type: integer
-        default: 100
-      description: The numbers of items to return.
-
-    # Database entity fields
-    Username:
-      in: path
-      name: username
-      schema:
-        type: string
-      required: true
-      description: |
-        The username of the user.
-
-        *New in version 2.8.0*
-    RoleName:
-      in: path
-      name: role_name
-      schema:
-        type: string
-      required: true
-      description: The role name
-
-    OrderBy:
-      in: query
-      name: order_by
-      schema:
-        type: string
-      required: false
-      description: |
-        The name of the field to order the results by.
-        Prefix a field name with `-` to reverse the sort order.
-
-        *New in version 2.8.0*
-
-    UpdateMask:
-      in: query
-      name: update_mask
-      schema:
-        type: array
-        items:
+          title: Total Entries
+      type: object
+      required:
+      - total_entries
+      title: PermissionCollectionResponse
+      description: Outgoing representation of a paginated collection of permissions.
+    Resource:
+      properties:
+        name:
           type: string
-      description: |
-        The fields to update on the resource. If absent or empty, all modifiable fields are updated.
-        A comma-separated list of fully qualified names of fields.
-      style: form
-      explode: false
-
-  # Reusable responses, such as 401 Unauthenticated or 400 Bad Request
-  responses:
-    # 400
-    'BadRequest':
-      description: Client specified an invalid argument.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 401
-    'Unauthenticated':
-      description: Request not authenticated due to missing, invalid, authentication info.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 403
-    'PermissionDenied':
-      description: Client does not have sufficient permission.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 404
-    'NotFound':
-      description: A specified resource is not found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 405
-    'MethodNotAllowed':
-      description: Request method is known by the server but is not supported by the target resource.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 406
-    'NotAcceptable':
-      description: A specified Accept header is not allowed.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 409
-    'AlreadyExists':
-      description: An existing resource conflicts with the request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    # 500
-    'Unknown':
-      description: Unknown server error.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-
+          title: Name
+      type: object
+      required:
+      - name
+      title: Resource
+      description: Outgoing representation of a resource.
+    Role:
+      properties:
+        name:
+          type: string
+          title: Name
+      type: object
+      required:
+      - name
+      title: Role
+      description: Lightweight role reference used by /users schemas.
+    RoleBody:
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Name
+        actions:
+          items:
+            $ref: '#/components/schemas/ActionResource'
+          type: array
+          title: Actions
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: RoleBody
+      description: Incoming payload for creating/updating a role.
+    RoleCollectionResponse:
+      properties:
+        roles:
+          items:
+            $ref: '#/components/schemas/RoleResponse'
+          type: array
+          title: Roles
+        total_entries:
+          type: integer
+          title: Total Entries
+      type: object
+      required:
+      - roles
+      - total_entries
+      title: RoleCollectionResponse
+      description: Outgoing representation of a paginated collection of roles.
+    RoleResponse:
+      properties:
+        name:
+          type: string
+          title: Name
+        actions:
+          items:
+            $ref: '#/components/schemas/ActionResource'
+          type: array
+          title: Actions
+      type: object
+      required:
+      - name
+      title: RoleResponse
+      description: Outgoing representation of a role and its permissions.
+    UserBody:
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Username
+        email:
+          type: string
+          minLength: 1
+          title: Email
+        first_name:
+          type: string
+          minLength: 1
+          title: First Name
+        last_name:
+          type: string
+          minLength: 1
+          title: Last Name
+        roles:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Role'
+            type: array
+          - type: 'null'
+          title: Roles
+        password:
+          type: string
+          format: password
+          title: Password
+          writeOnly: true
+      additionalProperties: false
+      type: object
+      required:
+      - username
+      - email
+      - first_name
+      - last_name
+      - password
+      title: UserBody
+      description: Incoming payload for creating a user.
+    UserCollectionResponse:
+      properties:
+        users:
+          items:
+            $ref: '#/components/schemas/UserResponse'
+          type: array
+          title: Users
+        total_entries:
+          type: integer
+          title: Total Entries
+      type: object
+      required:
+      - users
+      - total_entries
+      title: UserCollectionResponse
+      description: Response model for a collection of users.
+    UserPatchBody:
+      properties:
+        username:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Username
+        email:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Email
+        first_name:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: First Name
+        last_name:
+          anyOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+          title: Last Name
+        roles:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Role'
+            type: array
+          - type: 'null'
+          title: Roles
+        password:
+          anyOf:
+          - type: string
+            format: password
+            writeOnly: true
+          - type: 'null'
+          title: Password
+      additionalProperties: false
+      type: object
+      title: UserPatchBody
+      description: Incoming payload for updating a user (all fields optional).
+    UserResponse:
+      properties:
+        username:
+          type: string
+          title: Username
+        email:
+          type: string
+          title: Email
+        first_name:
+          type: string
+          title: First Name
+        last_name:
+          type: string
+          title: Last Name
+        roles:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Role'
+            type: array
+          - type: 'null'
+          title: Roles
+        active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+        last_login:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Last Login
+        login_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Login Count
+        fail_login_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Fail Login Count
+        created_on:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Created On
+        changed_on:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Changed On
+      type: object
+      required:
+      - username
+      - email
+      - first_name
+      - last_name
+      title: UserResponse
+      description: Outgoing representation of a user (no password).
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
   securitySchemes:
-    Basic:
+    OAuth2PasswordBearer:
+      type: oauth2
+      description: To authenticate Airflow API requests, clients must include a JWT
+        (JSON Web Token) in the Authorization header of each request. This token is
+        used to verify the identity of the client and ensure that they have the appropriate
+        permissions to access the requested resources. You can use the endpoint ``POST
+        /auth/token`` in order to generate a JWT token. Upon successful authentication,
+        the server will issue a JWT token that contains the necessary information
+        (such as user identity and scope) to authenticate subsequent requests. To
+        learn more about Airflow public API authentication, please read https://airflow.apache.org/docs/apache-airflow/stable/security/api.html.
+      flows:
+        password:
+          scopes: {}
+          tokenUrl: /auth/token
+    HTTPBearer:
       type: http
-      scheme: basic
-      description: To authenticate FAB auth manager API requests, clients have the option to use basic
-        authentication. To learn more about FAB auth manager API authentication, please read
-        https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/auth-manager/api-authentication.html#basic-authentication.
-    GoogleOpenId:
-      type: openIdConnect
-      openIdConnectUrl: https://accounts.google.com/.well-known/openid-configuration
-      description: To authenticate FAB auth manager API requests, clients have the option to use Google OpenID.
-        To learn more about Google OpenID authentication, please read
-        https://airflow.apache.org/docs/apache-airflow-providers-google/stable/api-auth-backend/google-openid.html.
-    Kerberos:
-      type: http
-      scheme: negotiate
-      description: To authenticate FAB auth manager API requests, clients have the option to use Kerberos
-        authentication. To learn more about FAB auth manager API authentication, please read
-        https://airflow.apache.org/docs/apache-airflow-providers-fab/stable/auth-manager/api-authentication.html#kerberos-authentication.
-
-tags:
-  - name: Role
-  - name: Permission
-  - name: User
+      scheme: bearer
