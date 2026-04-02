@@ -115,17 +115,29 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	if token == "" && username != "" && password != "" {
 		tflog.Info(ctx, "Fetching JWT token using username/password")
 
-		jwtToken, err := fetchJWTToken(ctx, httpClient, host, username, password)
-		if err != nil {
-			// FAB 3.2.0 has a bug where the token endpoint crashes during initialization.
-			// Fall back to basic auth which doesn't require the Flask-AppBuilder views.
-			tflog.Warn(ctx, "Failed to obtain JWT token, falling back to basic auth", map[string]interface{}{
-				"error": err.Error(),
-			})
-		} else {
-			token = jwtToken
-			tflog.Info(ctx, "Successfully obtained JWT token")
+		var jwtToken string
+		var err error
+
+		// FAB 3.2.0 has a bug where the token endpoint may crash on first call
+		// due to Flask-AppBuilder initialization issues. Retry once.
+		for attempt := 1; attempt <= 2; attempt++ {
+			jwtToken, err = fetchJWTToken(ctx, httpClient, host, username, password)
+			if err == nil {
+				break
+			}
+			if attempt == 1 {
+				tflog.Warn(ctx, "JWT token fetch failed, retrying", map[string]interface{}{
+					"error":   err.Error(),
+					"attempt": attempt,
+				})
+			}
 		}
+
+		if err != nil {
+			return nil, diag.Errorf("failed to obtain JWT token: %s", err)
+		}
+		token = jwtToken
+		tflog.Info(ctx, "Successfully obtained JWT token")
 	}
 
 	client := &Client{
