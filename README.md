@@ -4,7 +4,7 @@ Terraform provider for managing Apache Airflow FAB Auth Manager resources.
 
 # Tested against  
 - Airflow 3.1.7 
-- FAB Provider 3.2.0 
+- FAB Provider 3.6.0 
 
 **Note:** 3.2.0 version of FAB is buggy, therefore delete operations aren't working for FAB 3.2.0. Might persist accross other FAB releases.
 
