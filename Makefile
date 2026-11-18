@@ -1,7 +1,7 @@
 NAMESPACE=example
 NAME=airflow
 BINARY=terraform-provider-${NAME}
-VERSION=0.1.0
+VERSION=0.2.0
 OS_ARCH=$(shell go env GOOS)_$(shell go env GOARCH)
 
 default: build

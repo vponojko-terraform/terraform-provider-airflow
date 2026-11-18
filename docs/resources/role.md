@@ -43,6 +43,8 @@ Common resources: `Admin`, `Connections`, `DAGs`, `DAG Runs`, `DAG Code`, `Pools
 
 For DAG-specific permissions, use `DAG:{dag_id}` format (supports wildcards: `DAG:team_*`).
 
+From Airflow 3.4.1 (with FAB provider 3.11.0+), Dag bundles have their own `Dag Bundles` resource. Custom roles that should see Dag bundles need `can_read` and `menu_access` on `Dag Bundles` added explicitly.
+
 ## Built-in Roles
 
 Built-in roles (`Admin`, `Op`, `User`, `Viewer`, `Public`) cannot be created or deleted. Use `terraform import` to manage them.
