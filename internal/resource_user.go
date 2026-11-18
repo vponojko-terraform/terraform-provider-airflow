@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -55,10 +56,13 @@ func resourceUser() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 			},
 			"active": {
-				Type:        schema.TypeBool,
-				Optional:    true,
-				Default:     true,
-				Description: "Whether the user is active",
+				Type:     schema.TypeBool,
+				Optional: true,
+				Computed: true,
+				// The FAB API (UserBody / UserPatchBody) has no `active` field, so it cannot be set.
+				Deprecated:       "The FAB auth manager API cannot change 'active'; it is reported read-only. Remove it from your configuration.",
+				ValidateDiagFunc: validateActiveTrue,
+				Description:      "Whether the user is active (read-only, reported by Airflow)",
 			},
 			"last_login": {
 				Type:        schema.TypeString,
@@ -89,10 +93,24 @@ func resourceUser() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Use basic auth instead of JWT for this resource (required for FAB < 3.2.0)",
+				Deprecated:  basicAuthDeprecation,
+				Description: "Use basic auth instead of JWT for this resource (legacy FAB only)",
 			},
 		},
 	}
+}
+
+// validateActiveTrue rejects active=false, which the FAB API cannot apply.
+func validateActiveTrue(v interface{}, path cty.Path) diag.Diagnostics {
+	if active, ok := v.(bool); ok && !active {
+		return diag.Diagnostics{{
+			Severity:      diag.Error,
+			Summary:       "active = false is not supported",
+			Detail:        "The FAB auth manager API has no way to deactivate a user. Deactivate the user in the Airflow UI or CLI, or remove the user.",
+			AttributePath: path,
+		}}
+	}
+	return nil
 }
 
 // resourceUserImport supports importing users with optional auth method specification.
@@ -130,13 +148,14 @@ type createUserRequest struct {
 	Roles     []RoleRef `json:"roles,omitempty"`
 }
 
+// updateUserRequest matches the FAB UserPatchBody schema (extra fields are rejected).
+// Roles is a pointer so an explicit empty list is sent as [] to clear all roles.
 type updateUserRequest struct {
-	FirstName *string   `json:"first_name,omitempty"`
-	LastName  *string   `json:"last_name,omitempty"`
-	Email     *string   `json:"email,omitempty"`
-	Password  *string   `json:"password,omitempty"`
-	Roles     []RoleRef `json:"roles,omitempty"`
-	Active    *bool     `json:"active,omitempty"`
+	FirstName *string    `json:"first_name,omitempty"`
+	LastName  *string    `json:"last_name,omitempty"`
+	Email     *string    `json:"email,omitempty"`
+	Password  *string    `json:"password,omitempty"`
+	Roles     *[]RoleRef `json:"roles,omitempty"`
 }
 
 func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -196,17 +215,6 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		}
 	} else {
 		d.SetId(username)
-	}
-
-	// If active is explicitly set to false, we need to update after create
-	// since the API doesn't accept 'active' on POST
-	if !d.Get("active").(bool) {
-		active := false
-		updateReq := updateUserRequest{Active: &active}
-		_, _, err := client.DoRequestWithAuth(ctx, "PATCH", fmt.Sprintf("/auth/fab/v1/users/%s", URLEncode(username)), updateReq, authMethod)
-		if err != nil {
-			return diag.FromErr(fmt.Errorf("user created but failed to set active=false: %w", err))
-		}
 	}
 
 	return resourceUserRead(ctx, d, m)
@@ -334,17 +342,16 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 	}
 
 	if d.HasChange("active") {
-		v := d.Get("active").(bool)
-		req.Active = &v
-		hasChanges = true
+		return diag.Errorf("cannot change 'active' for user '%s': the FAB auth manager API does not support it; change it in the Airflow UI or CLI and remove 'active' from your configuration", username)
 	}
 
 	if d.HasChange("roles") {
 		rolesList := d.Get("roles").([]interface{})
-		req.Roles = make([]RoleRef, len(rolesList))
+		roles := make([]RoleRef, len(rolesList))
 		for i, r := range rolesList {
-			req.Roles[i] = RoleRef{Name: r.(string)}
+			roles[i] = RoleRef{Name: r.(string)}
 		}
+		req.Roles = &roles
 		hasChanges = true
 	}
 
@@ -390,7 +397,7 @@ func resourceUserDelete(ctx context.Context, d *schema.ResourceData, m interface
 			return diags
 		}
 		if statusCode == 403 {
-			return diag.Errorf("cannot delete your own user account")
+			return diag.Errorf("permission denied deleting user '%s': %s", username, err)
 		}
 		return diag.FromErr(err)
 	}

@@ -93,7 +93,8 @@ func dataSourceUser() *schema.Resource {
 				Type:        schema.TypeBool,
 				Optional:    true,
 				Default:     false,
-				Description: "Use basic auth instead of JWT for this data source (required for FAB < 3.2.0)",
+				Deprecated:  basicAuthDeprecation,
+				Description: "Use basic auth instead of JWT for this data source (legacy FAB only)",
 			},
 		},
 	}

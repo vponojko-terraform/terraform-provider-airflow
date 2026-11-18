@@ -2,7 +2,7 @@ terraform {
   required_providers {
     airflow = {
       source  = "example/airflow"
-      version = "0.1.0"
+      version = "0.2.0"
     }
   }
 }
@@ -51,7 +51,6 @@ resource "airflow_user" "data_engineer" {
   email      = "jane.smith@example.com"
   password   = "SecurePassword123!"
   roles      = ["User", airflow_role.dag_reader.name]
-  active     = true
 }
 
 # Look up an existing user

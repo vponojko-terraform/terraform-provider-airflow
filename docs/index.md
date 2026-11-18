@@ -23,28 +23,13 @@ resource "airflow_user" "example" {
 
 ## Authentication
 
-The provider supports two authentication methods:
+The FAB auth manager API (`/auth/fab/v1/*`) only accepts JWT bearer tokens. The provider supports two ways to get one:
 
-### Airflow Configuration Required
+### Username / Password
 
-Before using this provider, you must enable basic authentication for the FAB Auth Manager API in your Airflow configuration:
+The provider exchanges the credentials for a JWT via `POST /auth/token`. Since FAB provider 3.11.0 this
+only works for the configured `AUTH_TYPE` (database or LDAP); for OAuth or remote-user setups use a token.
 
-```ini
-[fab]
-auth_backends = airflow.providers.fab.auth_manager.api.auth.backend.basic_auth
-```
-
-For Helm chart deployments, add this to your values file:
-
-```yaml
-config:
-  fab:
-    auth_backends: 'airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
-```
-
-Without this setting, the FAB API endpoints (`/auth/fab/v1/*`) will return 401 Unauthorized.
-
-### Basic Authentication
 ```hcl
 provider "airflow" {
   host     = "https://airflow.example.com"
@@ -69,11 +54,12 @@ provider "airflow" {
 
 ### Optional
 
-- `username` (String, Sensitive) - Username for basic authentication
-- `password` (String, Sensitive) - Password for basic authentication
+- `username` (String, Sensitive) - Username used to obtain a JWT
+- `password` (String, Sensitive) - Password used to obtain a JWT
 - `token` (String, Sensitive) - JWT Bearer token (alternative to username/password)
 - `insecure_skip_verify` (Boolean) - Skip TLS certificate verification. Default: `false`
 - `timeout` (Number) - Request timeout in seconds. Default: `30`
+- `use_basic_auth` (Boolean, Deprecated) - Send basic auth instead of JWT. Current FAB releases reject basic auth on `/auth/fab/v1/*`.
 
 ## Environment Variables
 
@@ -81,3 +67,4 @@ provider "airflow" {
 - `AIRFLOW_USERNAME` - Auth username
 - `AIRFLOW_PASSWORD` - Auth password
 - `AIRFLOW_TOKEN` - JWT token
+- `AIRFLOW_USE_BASIC_AUTH` - Deprecated, see `use_basic_auth`

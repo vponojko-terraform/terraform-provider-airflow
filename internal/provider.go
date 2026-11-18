@@ -16,6 +16,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+// basicAuthDeprecation is shown for every use_basic_auth attribute. Since the FAB API moved to
+// FastAPI, /auth/fab/v1/* only accepts JWT bearer tokens (basic auth returns 401).
+const basicAuthDeprecation = "Basic auth is not accepted by the FAB auth manager API on current Airflow 3.x / FAB releases; the provider obtains a JWT from POST /auth/token instead. This option will be removed in a future release."
+
 // Provider returns a terraform provider for Airflow FAB Auth Manager
 func Provider() *schema.Provider {
 	return &schema.Provider{
@@ -62,9 +66,9 @@ func Provider() *schema.Provider {
 			"use_basic_auth": {
 				Type:        schema.TypeBool,
 				Optional:    true,
-				Default:     false,
 				DefaultFunc: schema.EnvDefaultFunc("AIRFLOW_USE_BASIC_AUTH", false),
-				Description: "Use basic auth for all requests instead of JWT. Useful when the token endpoint is broken (FAB 3.2.0)",
+				Deprecated:  basicAuthDeprecation,
+				Description: "Use basic auth for all requests instead of JWT (legacy FAB only; current FAB API endpoints accept JWT only)",
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -142,15 +146,13 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 		}
 
 		if err != nil {
-			tflog.Warn(ctx, "Failed to obtain JWT token, falling back to basic auth", map[string]interface{}{
-				"error": err.Error(),
-			})
-			diags = append(diags, diag.Diagnostic{
-				Severity: diag.Warning,
-				Summary:  "JWT token fetch failed, using basic auth fallback",
-				Detail:   fmt.Sprintf("Could not obtain JWT token: %s. All requests will use basic auth. Note: some FAB endpoints (e.g., roles) may require JWT and reject basic auth. If you see auth errors, provide a pre-obtained token via the 'token' attribute or AIRFLOW_TOKEN env var.", err),
-			})
-			useBasicAuth = true
+			// Current FAB releases reject basic auth on /auth/fab/v1/*, so falling back would only
+			// turn this into confusing 401s on every resource. Fail early with the real cause.
+			return nil, diag.Diagnostics{{
+				Severity: diag.Error,
+				Summary:  "Failed to obtain JWT token",
+				Detail:   fmt.Sprintf("Could not obtain a JWT token from %s/auth/token: %s. Check the credentials, or provide a pre-obtained token via the 'token' attribute or AIRFLOW_TOKEN env var. Note: since FAB provider 3.11.0, POST /auth/token only accepts username/password for the configured AUTH_TYPE (database or LDAP).", strings.TrimRight(host, "/"), err),
+			}}
 		} else {
 			token = jwtToken
 			tflog.Info(ctx, "Successfully obtained JWT token")

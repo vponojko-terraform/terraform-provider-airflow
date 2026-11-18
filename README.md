@@ -2,37 +2,30 @@
 
 Terraform provider for managing Apache Airflow FAB Auth Manager resources.
 
-# Tested against  
-- Airflow 3.1.7 
-- FAB Provider 3.6.0 
+# Tested against
 
-**Note:** 3.2.0 version of FAB is buggy, therefore delete operations aren't working for FAB 3.2.0. Might persist accross other FAB releases.
+- Airflow 3.4.0 (`apache/airflow:3.4.0` Docker image)
+- FAB Provider 3.11.0 (also 3.10.2, the version bundled in the 3.4.0 image)
 
+**Note:** FAB 3.2.0 is buggy (delete operations fail); avoid it.
 
 ## Requirements
 
 - Terraform >= 0.13
-- Go >= 1.21
-- Apache Airflow 3.1.6+ with FAB Provider 3.0.2+
+- Go >= 1.25 (to build)
+- Apache Airflow 3.x with the FAB auth manager (`AIRFLOW__CORE__AUTH_MANAGER=airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager`)
 
-## Airflow Configuration
+## Authentication
 
-To use basic authentication with the FAB Auth Manager API, you must configure the `auth_backends` setting in your Airflow configuration:
+The FAB auth manager API (`/auth/fab/v1/*`) only accepts JWT bearer tokens. With `username`/`password`
+the provider obtains a token from `POST /auth/token`; alternatively pass a pre-obtained `token`.
+Basic auth (and the `[fab] auth_backends` setting) is not used by these endpoints, so `use_basic_auth`
+is deprecated.
 
-```ini
-[fab]
-auth_backends = airflow.providers.fab.auth_manager.api.auth.backend.basic_auth
-```
+Since FAB 3.11.0, `POST /auth/token` only accepts a username/password for the configured `AUTH_TYPE`
+(database or LDAP). For OAuth / remote-user setups, supply `token` instead.
 
-For Helm chart deployments, add this to your values file under `config`:
-
-```yaml
-config:
-  fab:
-    auth_backends: 'airflow.providers.fab.auth_manager.api.auth.backend.basic_auth'
-```
-
-Without this configuration, the FAB API endpoints (`/auth/fab/v1/*`) will return 401 Unauthorized even with valid credentials.
+The authenticating user needs permission to manage users and roles (e.g. the `Admin` role).
 
 ## Setup
 

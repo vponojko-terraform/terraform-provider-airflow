@@ -62,7 +62,9 @@ type createRoleRequest struct {
 	Actions []ActionPerm `json:"actions,omitempty"`
 }
 
+// updateRoleRequest matches the FAB RoleBody schema, which requires `name` on PATCH too.
 type updateRoleRequest struct {
+	Name    string       `json:"name"`
 	Actions []ActionPerm `json:"actions"`
 }
 
@@ -182,6 +184,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 
 	if d.HasChange("permission") {
 		req := updateRoleRequest{
+			Name:    name,
 			Actions: []ActionPerm{},
 		}
 
@@ -229,7 +232,7 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 			return diags
 		}
 		if statusCode == 403 {
-			return diag.Errorf("cannot delete built-in role '%s'", name)
+			return diag.Errorf("permission denied deleting role '%s': %s", name, err)
 		}
 		// FAB 3.2.0 has a bug where delete_role passes Role object instead of name string
 		// causing a SQLAlchemy error. Check if role was actually deleted despite the 500.
